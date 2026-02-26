@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPUR – Order & Pay</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --spur-blue: #0d1b3e;
+    --spur-red: #C8102E;
+    --spur-orange: #F47920;
+    --spur-grey: #f5f5f5;
+    --spur-border: #e0e0e0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Open Sans', sans-serif; background: #fff; color: #1a1a1a; min-height: 100vh; }
+
+  /* SHARED HEADER */
+  .header {
+    background: var(--spur-blue); padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-badge { width: 40px; height: 40px; background: var(--spur-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 3px; color: #fff; }
+  .header-right { font-size: 12px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 6px; }
+
+  /* PROGRESS BAR */
+  .progress-bar { background: var(--spur-blue); padding: 0 24px 14px; display: flex; align-items: center; justify-content: center; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; text-transform: uppercase; }
+  .step.active { color: #fff; }
+  .step.done { color: var(--spur-orange); }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+  .step.done .step-num { background: var(--spur-orange); border-color: var(--spur-orange); color: #fff; }
+  .step.active .step-num { background: #fff; color: var(--spur-blue); border-color: #fff; }
+  .step-divider { width: 40px; height: 1px; background: rgba(255,255,255,0.2); margin: 0 8px; }
+
+  /* PAGE SECTIONS */
+  #menuPage { display: block; }
+  #paymentPage { display: none; background: var(--spur-grey); min-height: calc(100vh - 120px); }
+
+  /* ═══════════════════════════════
+     MENU PAGE STYLES
+  ═══════════════════════════════ */
+  .menu-subheader { background: var(--spur-blue); padding: 20px 20px 16px; text-align: center; }
+  .menu-subheader h1 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 6px; color: #fff; }
+  .menu-subheader p { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+  .nav-tabs { background: #fff; border-bottom: 1px solid var(--spur-border); padding: 0 20px; display: flex; overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 14px 14px; font-size: 11px; font-weight: 700; color: #666; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
+  .nav-tab.active { color: var(--spur-blue); border-bottom-color: var(--spur-orange); }
+
+  .menu-container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 140px; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+  .menu-item { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+  .menu-item:hover { border-color: var(--spur-orange); box-shadow: 0 2px 12px rgba(244,121,32,0.15); }
+  .menu-item.selected { border-color: var(--spur-orange); background: #fff8f3; box-shadow: 0 2px 12px rgba(244,121,32,0.2); }
+
+  .check-badge { display: none; position: absolute; top: 12px; right: 12px; background: var(--spur-orange); color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 800; align-items: center; justify-content: center; }
+  .menu-item.selected .check-badge { display: flex; }
+
+  .item-name { font-size: 13px; font-weight: 800; color: var(--spur-blue); text-transform: uppercase; margin-bottom: 6px; padding-right: 28px; line-height: 1.3; }
+  .item-desc { font-size: 12px; color: #777; line-height: 1.5; margin-bottom: 12px; }
+  .item-price { font-size: 18px; font-weight: 800; color: var(--spur-orange); }
+
+  .qty-control { display: none; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0e8e0; }
+  .menu-item.selected .qty-control { display: flex; }
+  .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--spur-orange); background: transparent; color: var(--spur-orange); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .qty-btn:hover { background: var(--spur-orange); color: white; }
+  .qty-display { font-size: 16px; font-weight: 800; color: var(--spur-blue); min-width: 20px; text-align: center; }
+
+  /* ORDER BAR */
+  .order-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 2px solid var(--spur-border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 200; }
+  .order-info { display: flex; flex-direction: column; }
+  .order-count { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .order-total { font-size: 26px; font-weight: 800; color: var(--spur-blue); }
+  .confirm-btn { background: var(--spur-red); color: white; border: none; padding: 14px 36px; border-radius: 6px; font-family: 'Open Sans', sans-serif; font-size: 15px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+  .confirm-btn:hover { background: #a50d24; transform: scale(1.02); }
+  .confirm-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  /* ORDER CONFIRMED OVERLAY */
+  .confirmed-overlay { display: none; position: fixed; inset: 0; background: rgba(13,27,62,0.96); z-index: 300; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+  .confirmed-overlay.show { display: flex; }
+  .confirmed-icon { font-size: 56px; margin-bottom: 12px; }
+  .confirmed-title { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 4px; color: #fff; margin-bottom: 6px; }
+  .confirmed-subtitle { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
+  .confirmed-ref { font-size: 12px; color: var(--spur-orange); font-weight: 700; margin-bottom: 20px; letter-spacing: 1px; }
+  .confirmed-summary { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 16px; width: 100%; max-width: 380px; margin-bottom: 24px; text-align: left; }
+  .summary-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; color: rgba(255,255,255,0.85); border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .summary-row:last-child { border: none; font-size: 15px; font-weight: 800; color: var(--spur-orange); padding-top: 10px; margin-top: 4px; }
+  .proceed-btn { background: var(--spur-orange); color: white; border: none; padding: 14px 40px; border-radius: 6px; font-family: 'Open Sans', sans-serif; font-size: 15px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+  .proceed-btn:hover { background: #d96a10; transform: scale(1.02); }
+
+  /* ═══════════════════════════════
+     PAYMENT PAGE STYLES
+  ═══════════════════════════════ */
+  .payment-inner { max-width: 1000px; margin: 32px auto; padding: 0 20px 60px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+  @media (max-width: 768px) { .payment-inner { grid-template-columns: 1fr; } }
+
+  .card { background: #fff; border-radius: 10px; border: 1px solid var(--spur-border); overflow: hidden; margin-bottom: 20px; }
+  .card-header { background: var(--spur-blue); padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+  .card-header h3 { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: #fff; }
+  .card-header .icon { font-size: 18px; }
+  .card-body { padding: 20px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; }
+  .form-group input, .form-group select { padding: 11px 14px; border: 1.5px solid var(--spur-border); border-radius: 6px; font-family: 'Open Sans', sans-serif; font-size: 14px; color: #1a1a1a; transition: border-color 0.2s; outline: none; background: #fff; }
+  .form-group input:focus { border-color: var(--spur-orange); box-shadow: 0 0 0 3px rgba(244,121,32,0.1); }
+  .form-group input::placeholder { color: #bbb; }
+
+  .card-input-wrap { position: relative; }
+  .card-input-wrap input { padding-right: 60px; }
+  .card-icons { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; }
+
+  .tip-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .tip-btn { padding: 8px 16px; border: 1.5px solid var(--spur-border); border-radius: 6px; background: #fff; font-size: 13px; font-weight: 700; color: #555; cursor: pointer; transition: all 0.2s; }
+  .tip-btn:hover { border-color: var(--spur-orange); color: var(--spur-orange); }
+  .tip-btn.active { background: var(--spur-orange); border-color: var(--spur-orange); color: #fff; }
+
+  .pay-methods { display: flex; gap: 8px; margin-bottom: 20px; }
+  .pay-method { flex: 1; padding: 10px; border: 1.5px solid var(--spur-border); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 700; color: #666; }
+  .pay-method:hover { border-color: var(--spur-orange); }
+  .pay-method.active { border-color: var(--spur-orange); background: #fff8f3; color: var(--spur-orange); }
+  .pay-method .method-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+  /* SUMMARY SIDEBAR */
+  .summary-card { background: #fff; border-radius: 10px; border: 1px solid var(--spur-border); overflow: hidden; position: sticky; top: 88px; }
+  .summary-header { background: var(--spur-blue); padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+  .summary-header h3 { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: #fff; }
+  .summary-body { padding: 20px; }
+
+  .restaurant-info { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--spur-border); margin-bottom: 14px; }
+  .restaurant-logo { width: 40px; height: 40px; background: var(--spur-red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .restaurant-name { font-size: 13px; font-weight: 800; color: var(--spur-blue); }
+  .restaurant-location { font-size: 11px; color: #888; margin-top: 2px; }
+
+  .order-item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .order-item-row:last-child { border-bottom: none; }
+  .item-left-pay { display: flex; gap: 8px; align-items: flex-start; }
+  .item-qty-badge { background: var(--spur-blue); color: #fff; width: 20px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .item-name-pay { font-size: 13px; color: #333; font-weight: 600; line-height: 1.3; }
+  .item-price-pay { font-size: 13px; font-weight: 700; color: var(--spur-blue); white-space: nowrap; }
+
+  .pay-divider { height: 1px; background: var(--spur-border); margin: 12px 0; }
+  .pay-totals { display: flex; flex-direction: column; gap: 6px; }
+  .total-row { display: flex; justify-content: space-between; font-size: 13px; color: #555; }
+  .total-row.tip-row { color: var(--spur-orange); font-weight: 700; }
+  .total-row.grand { font-size: 18px; font-weight: 800; color: var(--spur-blue); padding-top: 8px; border-top: 2px solid var(--spur-blue); margin-top: 4px; }
+
+  .pay-btn { width: 100%; padding: 16px; background: var(--spur-red); color: #fff; border: none; border-radius: 8px; font-family: 'Open Sans', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; margin-top: 16px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pay-btn:hover { background: #a50d24; transform: scale(1.01); }
+  .pay-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  .security-note { text-align: center; font-size: 11px; color: #aaa; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+  /* PAYMENT SUCCESS OVERLAY */
+  .pay-success-overlay { display: none; position: fixed; inset: 0; background: rgba(13,27,62,0.97); z-index: 500; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+  .pay-success-overlay.show { display: flex; }
+  .success-circle { width: 80px; height: 80px; background: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 20px; animation: popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .pay-success-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 4px; color: #fff; margin-bottom: 8px; }
+  .pay-success-msg { font-size: 14px; color: rgba(255,255,255,0.65); margin-bottom: 6px; line-height: 1.6; }
+  .pay-success-ref { font-size: 13px; color: var(--spur-orange); font-weight: 700; margin-bottom: 32px; letter-spacing: 1px; }
+
+  /* SPINNER */
+  .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+
+  /* PROMO CODE BANNER */
+  .promo-banner { background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6e 100%); border: 2px solid var(--spur-orange); border-radius: 12px; padding: 16px 20px; width: 100%; max-width: 380px; margin-bottom: 20px; text-align: center; }
+  .promo-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px; }
+  .promo-logo-acsa { background: #fff; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 800; color: #0d1b3e; letter-spacing: 1px; }
+  .promo-logo-x { color: rgba(255,255,255,0.4); font-size: 14px; }
+  .promo-logo-spur { background: var(--spur-red); border-radius: 6px; padding: 4px 10px; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 2px; color: #fff; }
+  .promo-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .promo-code-display { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px; color: var(--spur-orange); background: rgba(244,121,32,0.1); border: 1px dashed var(--spur-orange); border-radius: 8px; padding: 8px 16px; display: inline-block; margin-bottom: 8px; }
+  .promo-discount { font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .promo-email-note { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .promo-applied { background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+  .promo-applied-left { display: flex; align-items: center; gap: 8px; color: #16a34a; font-weight: 700; }
+  .promo-applied-right { color: #16a34a; font-weight: 800; font-size: 14px; }
+  .promo-input-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
+  .promo-input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--spur-border); border-radius: 6px; font-family: 'Open Sans', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; outline: none; }
+  .promo-input:focus { border-color: var(--spur-orange); box-shadow: 0 0 0 3px rgba(244,121,32,0.1); }
+  .promo-input.valid { border-color: #22c55e; background: #f0fdf4; }
+  .promo-input.invalid { border-color: var(--spur-red); background: #fff5f5; }
+  .promo-apply-btn { padding: 10px 16px; background: var(--spur-blue); color: #fff; border: none; border-radius: 6px; font-family: 'Open Sans', sans-serif; font-size: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; transition: all 0.2s; }
+  .promo-apply-btn:hover { background: #1a3a6e; }
+  .promo-msg { font-size: 11px; margin-bottom: 8px; padding: 6px 10px; border-radius: 4px; display: none; }
+  .promo-msg.success { background: #f0fdf4; color: #16a34a; display: block; }
+  .promo-msg.error { background: #fff5f5; color: var(--spur-red); display: block; }
+</style>
+</head>
+<body>
+
+<!-- ── SHARED HEADER ── -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-badge">🤠</div>
+    <span class="logo-text">SPUR</span>
+  </div>
+  <div class="header-right" id="headerRight">🍔 Burger Menu</div>
+</div>
+
+<!-- ── PROGRESS BAR ── -->
+<div class="progress-bar" id="progressBar">
+  <div class="step done" id="step1"><div class="step-num">✓</div><span>Menu</span></div>
+  <div class="step-divider"></div>
+  <div class="step active" id="step2"><div class="step-num">2</div><span>Order</span></div>
+  <div class="step-divider"></div>
+  <div class="step" id="step3"><div class="step-num">3</div><span>Payment</span></div>
+  <div class="step-divider"></div>
+  <div class="step" id="step4"><div class="step-num">4</div><span>Done</span></div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MENU PAGE
+════════════════════════════════════════ -->
+<div id="menuPage">
+  <div class="menu-subheader">
+    <h1>Burgers</h1>
+    <p>A wide range of delectable Spur burgers. Available in Beef, Soya or Chicken.</p>
+  </div>
+
+  <div class="nav-tabs">
+    <div class="nav-tab">Starters & Light Meals</div>
+    <div class="nav-tab">Shareables</div>
+    <div class="nav-tab">Salads & Veg</div>
+    <div class="nav-tab">Toasted Sarmies</div>
+    <div class="nav-tab">Sizzling Steaks & Grills</div>
+    <div class="nav-tab">Add a Sauce</div>
+    <div class="nav-tab">Ribs</div>
+    <div class="nav-tab">Combo's</div>
+    <div class="nav-tab">Chicken</div>
+    <div class="nav-tab">Schnitzels</div>
+    <div class="nav-tab active">Burgers</div>
+    <div class="nav-tab">Seafood</div>
+  </div>
+
+  <div class="menu-container">
+    <div class="menu-grid">
+
+      <div class="menu-item" onclick="toggleItem(this,'Original Spur Burger',119.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Original Spur Burger</div>
+        <div class="item-desc">Our finest patty grilled to perfection.</div>
+        <div class="item-price">R119.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Bacon & Cheese Burger',147.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Bacon & Cheese Burger</div>
+        <div class="item-desc">Topped with melted cheese & grilled bacon.</div>
+        <div class="item-price">R147.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Cheddamelt Burger',147.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Cheddamelt Burger</div>
+        <div class="item-desc">Topped with melted cheese and creamy mushroom or pepper sauce.</div>
+        <div class="item-price">R147.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Bacon, Cheese & Guacamole Burger',159.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Bacon, Cheese & Guacamole Burger</div>
+        <div class="item-desc">Topped with melted cheese, grilled bacon and guacamole.</div>
+        <div class="item-price">R159.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Goodie Burger',160.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Goodie Burger</div>
+        <div class="item-desc">Topped with melted cheese, a grilled pineapple ring and creamy mushroom sauce.</div>
+        <div class="item-price">R160.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Sauce Burger',143.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Sauce Burger</div>
+        <div class="item-desc">Topped with any one of our delicious sauces: Peri-Peri, Pepper, Cheese, Cheesy Garlic or Manhattan Mushroom.</div>
+        <div class="item-price">R143.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Original Spur Burger Double',139.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Original Spur Burger Double</div>
+        <div class="item-desc">Our finest patties (2 x 100g) grilled to perfection.</div>
+        <div class="item-price">R139.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Cheese Burger Double',151.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Cheese Burger Double</div>
+        <div class="item-desc">Tasty burger topped with melted cheese.</div>
+        <div class="item-price">R151.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Bacon & Cheese Burger Double',174.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Bacon & Cheese Burger Double</div>
+        <div class="item-desc">Topped with melted cheese & grilled bacon.</div>
+        <div class="item-price">R174.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Cheddamelt Burger Double',174.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Cheddamelt Burger Double</div>
+        <div class="item-desc">Topped with melted cheese and creamy mushroom or pepper sauce.</div>
+        <div class="item-price">R174.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Bacon, Cheese & Guacamole Burger Double',184.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Bacon, Cheese & Guacamole Burger Double</div>
+        <div class="item-desc">Topped with melted cheese, grilled bacon and guacamole.</div>
+        <div class="item-price">R184.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Goodie Burger Double',187.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Goodie Burger Double</div>
+        <div class="item-desc">Topped with melted cheese, a grilled pineapple ring and creamy mushroom sauce.</div>
+        <div class="item-price">R187.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Sauce Burger Double',161.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Sauce Burger Double</div>
+        <div class="item-desc">Topped with any one of our delicious sauces.</div>
+        <div class="item-price">R161.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Grilled Chicken Burger Double',119.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Grilled Chicken Burger Double</div>
+        <div class="item-desc">Succulent chicken breast fillet, grilled and basted to perfection.</div>
+        <div class="item-price">R119.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Soya Burger',99.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Soya Burger</div>
+        <div class="item-desc">A delicious soya-based burger, prepared Spur-style.</div>
+        <div class="item-price">R99.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Cheese Burger',129.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Cheese Burger</div>
+        <div class="item-desc">Tasty burger topped with melted cheese.</div>
+        <div class="item-price">R129.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Rib Burger',119.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Rib Burger</div>
+        <div class="item-desc">Succulent pork rib patties (2 x 100g) grilled in our famous Spur Basting.</div>
+        <div class="item-price">R119.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Grilled Chicken Burger',93.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Grilled Chicken Burger</div>
+        <div class="item-desc">Succulent chicken breast fillet, grilled and basted to perfection.</div>
+        <div class="item-price">R93.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleItem(this,'Burger Combo',169.90)">
+        <div class="check-badge">✓</div>
+        <div class="item-name">Burger Combo</div>
+        <div class="item-desc">Double cheese burger (2 x 100g patties) and a 350ml soda.</div>
+        <div class="item-price">R169.90</div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+          <span class="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(event,this,1)">+</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ORDER BAR -->
+  <div class="order-bar">
+    <div class="order-info">
+      <span class="order-count" id="orderCount">0 items selected</span>
+      <span class="order-total" id="orderTotal">R0.00</span>
+    </div>
+    <button class="confirm-btn" id="confirmBtn" onclick="confirmOrder()" disabled>Confirm Order</button>
+  </div>
+
+  <!-- ORDER CONFIRMED OVERLAY -->
+  <div class="confirmed-overlay" id="confirmedOverlay">
+    <div class="confirmed-icon">✅</div>
+    <div class="confirmed-title">Order Confirmed!</div>
+    <div class="confirmed-subtitle">Your order has been received.</div>
+    <div class="confirmed-ref" id="confirmedRef"></div>
+    <div class="confirmed-summary" id="confirmedSummary"></div>
+    <div class="promo-banner">
+      <div class="promo-label">🎉 Your Exclusive Promo Code</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+        <div class="promo-code-display" id="promoCodeDisplay">ACSA-5OFF</div>
+        <button onclick="copyPromoCode()" id="copyBtn" style="background:var(--spur-orange);border:none;border-radius:6px;padding:8px 12px;color:#fff;font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.2s;">Copy</button>
+      </div>
+      <div class="promo-discount">5% OFF your total payment!</div>
+      <div class="promo-email-note">📧 A promo code has been sent to your registered email!</div>
+    </div>
+    <button class="proceed-btn" onclick="goToPayment()">Proceed to Payment →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     PAYMENT PAGE
+════════════════════════════════════════ -->
+<div id="paymentPage">
+  <div class="payment-inner">
+
+    <!-- LEFT COL -->
+    <div>
+      <!-- CONTACT -->
+      <div class="card">
+        <div class="card-header"><span class="icon">👤</span><h3>Contact Details</h3></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label>First Name</label><input type="text" id="firstName" placeholder="John"></div>
+            <div class="form-group"><label>Last Name</label><input type="text" id="lastName" placeholder="Smith"></div>
+          </div>
+          <div class="form-row full">
+            <div class="form-group"><label>Email Address</label><input type="email" id="email" placeholder="john@example.com"></div>
+          </div>
+          <div class="form-row full">
+            <div class="form-group"><label>Mobile Number</label><input type="tel" id="phone" placeholder="+27 82 000 0000"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT METHOD -->
+      <div class="card">
+        <div class="card-header"><span class="icon">💳</span><h3>Payment Method</h3></div>
+        <div class="card-body">
+          <div class="pay-methods">
+            <div class="pay-method active" onclick="selectMethod(this,'card')"><span class="method-icon">💳</span>Card</div>
+            <div class="pay-method" onclick="selectMethod(this,'eft')"><span class="method-icon">🏦</span>EFT</div>
+            <div class="pay-method" onclick="selectMethod(this,'snapscan')"><span class="method-icon">📱</span>SnapScan</div>
+          </div>
+          <div id="cardForm">
+            <div class="form-row full"><div class="form-group"><label>Cardholder Name</label><input type="text" id="cardName" placeholder="John Smith"></div></div>
+            <div class="form-row full">
+              <div class="form-group">
+                <label>Card Number</label>
+                <div class="card-input-wrap">
+                  <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCard(this)">
+                  <div class="card-icons">💳</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Expiry Date</label><input type="text" id="expiry" placeholder="MM / YY" maxlength="7" oninput="formatExpiry(this)"></div>
+              <div class="form-group"><label>CVV</label><input type="text" id="cvv" placeholder="•••" maxlength="4"></div>
+            </div>
+          </div>
+          <div id="eftForm" style="display:none"><p style="font-size:13px;color:#666;line-height:1.6;padding:10px 0">You will be redirected to your bank's secure portal after clicking Pay Now.</p></div>
+          <div id="snapscanForm" style="display:none"><p style="font-size:13px;color:#666;line-height:1.6;padding:10px 0">A SnapScan QR code will be generated once you click Pay Now.</p></div>
+        </div>
+      </div>
+
+      <!-- TIP -->
+      <div class="card">
+        <div class="card-header"><span class="icon">⭐</span><h3>Add a Tip</h3></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:#888;margin-bottom:12px;">Show your appreciation for our staff</p>
+          <div class="tip-options">
+            <button class="tip-btn" onclick="selectTip(this,0)">No Tip</button>
+            <button class="tip-btn" onclick="selectTip(this,0.10)">10%</button>
+            <button class="tip-btn active" onclick="selectTip(this,0.15)">15%</button>
+            <button class="tip-btn" onclick="selectTip(this,0.20)">20%</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COL - SUMMARY -->
+    <div>
+      <div class="summary-card">
+        <div class="summary-header"><span style="font-size:18px">🧾</span><h3>Order Summary</h3></div>
+        <div class="summary-body">
+          <div class="restaurant-info">
+            <div class="restaurant-logo">🤠</div>
+            <div>
+              <div class="restaurant-name">SPUR Steak Ranches</div>
+              <div class="restaurant-location">📍 OR Tambo International Airport</div>
+            </div>
+          </div>
+          <div id="payOrderItems"></div>
+          <div class="pay-divider"></div>
+          <div class="pay-totals">
+            <div class="total-row"><span>Subtotal</span><span id="subtotalDisplay">R0.00</span></div>
+            <div class="total-row tip-row"><span id="tipLabel">Tip (15%)</span><span id="tipDisplay">R0.00</span></div>
+            <div class="total-row"><span>Service Fee</span><span>R0.00</span></div>
+            <div class="total-row grand"><span>Total</span><span id="grandTotal">R0.00</span></div>
+          </div>
+          <!-- PROMO CODE INPUT -->
+          <div class="promo-input-wrap">
+            <input type="text" class="promo-input" id="promoInput" placeholder="Enter promo code" maxlength="10" oninput="this.value = this.value.toUpperCase()">
+            <button class="promo-apply-btn" onclick="applyPromoCode()">Apply</button>
+          </div>
+          <div class="promo-msg" id="promoMsg"></div>
+          <div class="promo-applied" id="promoApplied" style="display:none">
+            <div class="promo-applied-left">🏷️ <span id="promoAppliedCode"></span></div>
+            <div class="promo-applied-right" id="promoAppliedPct">-5%</div>
+          </div>
+          <button class="pay-btn" id="payBtn" onclick="processPayment()"><span>🔒</span> Pay Now</button>
+          <div class="security-note">🔒 256-bit SSL encrypted · PCI DSS compliant</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAYMENT SUCCESS OVERLAY -->
+  <div class="pay-success-overlay" id="paySuccessOverlay">
+    <div class="success-circle">✓</div>
+    <div class="pay-success-title">Payment Successful!</div>
+    <div class="pay-success-msg">Thank you! Your food is being prepared.<br>You can now close this page.</div>
+    <div class="pay-success-ref" id="paySuccessRef">Order #SPR-000000</div>
+  </div>
+</div>
+
+<script>
+  const ORDER_API = 'https://699ebc1378dda56d396b2aec.mockapi.io/SPURMENU';
+  const PAYMENT_API = 'https://699ebc1378dda56d396b2aec.mockapi.io/SPURPAYMENT';
+  const ACSA_API = 'https://699ebc1378dda56d396b2aec.mockapi.io/ACSACount';
+
+
+  let selectedItems = {};
+  let menuTotal = 0;
+  let itemCount = 0;
+  let orderData = null;
+  let tipRate = 0.15;
+  let selectedPayMethod = 'card';
+  let promoCode = '';
+  let promoDiscount = 0;
+
+  function generatePromoCode() {
+    return 'ACSA-5OFF';
+  }
+
+  function copyPromoCode() {
+    const code = document.getElementById('promoCodeDisplay').textContent;
+    navigator.clipboard.writeText(code).then(function() {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      btn.style.background = '#22c55e';
+      setTimeout(function() {
+        btn.textContent = 'Copy';
+        btn.style.background = 'var(--spur-orange)';
+      }, 2000);
+    }).catch(function() {
+      // Fallback for older browsers
+      const el = document.createElement('textarea');
+      el.value = code;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      btn.style.background = '#22c55e';
+      setTimeout(function() {
+        btn.textContent = 'Copy';
+        btn.style.background = 'var(--spur-orange)';
+      }, 2000);
+    });
+  }
+
+
+  // ── MENU FUNCTIONS ──
+  function toggleItem(el, name, price) {
+    if (el.classList.contains('selected')) {
+      el.classList.remove('selected');
+      delete selectedItems[name];
+    } else {
+      el.classList.add('selected');
+      selectedItems[name] = { name, price, qty: 1 };
+    }
+    updateBar();
+  }
+
+  function changeQty(e, btn, delta) {
+    e.stopPropagation();
+    const item = btn.closest('.menu-item');
+    const qtyDisplay = item.querySelector('.qty-display');
+    const name = item.querySelector('.item-name').textContent;
+    let qty = parseInt(qtyDisplay.textContent) + delta;
+    if (qty < 1) qty = 1;
+    qtyDisplay.textContent = qty;
+    if (selectedItems[name]) selectedItems[name].qty = qty;
+    updateBar();
+  }
+
+  function updateBar() {
+    menuTotal = 0; itemCount = 0;
+    Object.values(selectedItems).forEach(item => {
+      menuTotal += item.price * item.qty;
+      itemCount += item.qty;
+    });
+    document.getElementById('orderTotal').textContent = 'R' + menuTotal.toFixed(2);
+    document.getElementById('orderCount').textContent = itemCount + (itemCount === 1 ? ' item selected' : ' items selected');
+    document.getElementById('confirmBtn').disabled = itemCount === 0;
+  }
+
+  async function confirmOrder() {
+    if (itemCount === 0) return;
+    const btn = document.getElementById('confirmBtn');
+    btn.innerHTML = '<div class="loading-spinner"></div>';
+    btn.disabled = true;
+
+    const orderId = 'SPR-' + Date.now();
+    orderData = {
+      orderId,
+      restaurant: 'SPUR OR Tambo Airport',
+      category: 'Burgers',
+      items: Object.values(selectedItems),
+      total: parseFloat(menuTotal.toFixed(2)),
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(ORDER_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      if (res.ok) {
+        const result = await res.json();
+        orderData.apiId = result.id;
+      }
+    } catch(e) {}
+
+    showConfirmed(orderId);
+  }
+
+  function showConfirmed(orderId) {
+    document.getElementById('confirmedRef').textContent = 'Order Reference: ' + orderId;
+    let html = '';
+    Object.values(selectedItems).forEach(item => {
+      html += `<div class="summary-row"><span>${item.qty}× ${item.name}</span><span>R${(item.price * item.qty).toFixed(2)}</span></div>`;
+    });
+    html += `<div class="summary-row"><span>Total</span><span>R${menuTotal.toFixed(2)}</span></div>`;
+    document.getElementById('confirmedSummary').innerHTML = html;
+
+    // Generate promo code
+    promoCode = generatePromoCode();
+    promoDiscount = parseFloat((menuTotal * 0.05).toFixed(2));
+    document.getElementById('promoCodeDisplay').textContent = promoCode;
+    document.getElementById('confirmedOverlay').classList.add('show');
+  }
+
+  function goToPayment() {
+    document.getElementById('confirmedOverlay').classList.remove('show');
+    document.getElementById('menuPage').style.display = 'none';
+    document.getElementById('paymentPage').style.display = 'block';
+
+    document.getElementById('headerRight').textContent = '🔒 Secure Payment';
+    document.getElementById('step2').className = 'step done';
+    document.getElementById('step2').querySelector('.step-num').textContent = '✓';
+    document.getElementById('step3').className = 'step active';
+
+    window.scrollTo(0, 0);
+    renderPaymentSummary();
+
+    // Pre-fill promo input with generated code as hint but don't auto-apply
+    if (promoCode) {
+      document.getElementById('promoInput').placeholder = 'e.g. ' + promoCode;
+    }
+  }
+
+  // ── PAYMENT FUNCTIONS ──
+  function renderPaymentSummary() {
+    if (!orderData) return;
+    let html = '';
+    orderData.items.forEach(item => {
+      html += `
+        <div class="order-item-row">
+          <div class="item-left-pay">
+            <div class="item-qty-badge">${item.qty}</div>
+            <div class="item-name-pay">${item.name}</div>
+          </div>
+          <div class="item-price-pay">R${(item.price * item.qty).toFixed(2)}</div>
+        </div>`;
+    });
+    document.getElementById('payOrderItems').innerHTML = html;
+    updatePayTotals();
+  }
+
+  let enteredPromo = '';
+
+  function applyPromoCode() {
+    const input = document.getElementById('promoInput').value.trim().toUpperCase();
+    const msg = document.getElementById('promoMsg');
+    if (input === promoCode && promoCode !== '') {
+      enteredPromo = input;
+      document.getElementById('promoInput').classList.add('valid');
+      document.getElementById('promoInput').classList.remove('invalid');
+      document.getElementById('promoInput').disabled = true;
+      msg.textContent = '✅ Promo code applied! 5% discount added.';
+      msg.className = 'promo-msg success';
+      document.getElementById('promoApplied').style.display = 'flex';
+      document.getElementById('promoAppliedCode').textContent = input;
+      updatePayTotals();
+    } else {
+      enteredPromo = '';
+      document.getElementById('promoInput').classList.add('invalid');
+      document.getElementById('promoInput').classList.remove('valid');
+      msg.textContent = '❌ Invalid promo code. Please check your email and try again.';
+      msg.className = 'promo-msg error';
+      document.getElementById('promoApplied').style.display = 'none';
+      updatePayTotals();
+    }
+  }
+
+  function updatePayTotals() {
+    const sub = orderData ? orderData.total : 0;
+    const discount = enteredPromo ? sub * 0.05 : 0;
+    const discounted = sub - discount;
+    const tip = discounted * tipRate;
+    const grand = discounted + tip;
+    document.getElementById('subtotalDisplay').textContent = 'R' + sub.toFixed(2);
+    document.getElementById('tipDisplay').textContent = 'R' + tip.toFixed(2);
+    document.getElementById('grandTotal').textContent = 'R' + grand.toFixed(2);
+  }
+
+  function selectTip(btn, rate) {
+    document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tipRate = rate;
+    const labels = {0:'No Tip', 0.10:'Tip (10%)', 0.15:'Tip (15%)', 0.20:'Tip (20%)'};
+    document.getElementById('tipLabel').textContent = labels[rate] || 'Tip';
+    updatePayTotals();
+  }
+
+  function selectMethod(el, method) {
+    document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('active'));
+    el.classList.add('active');
+    selectedPayMethod = method;
+    document.getElementById('cardForm').style.display = method === 'card' ? 'block' : 'none';
+    document.getElementById('eftForm').style.display = method === 'eft' ? 'block' : 'none';
+    document.getElementById('snapscanForm').style.display = method === 'snapscan' ? 'block' : 'none';
+  }
+
+  function formatCard(input) {
+    let val = input.value.replace(/\D/g,'').substring(0,16);
+    input.value = val.replace(/(.{4})/g,'$1 ').trim();
+  }
+
+  function formatExpiry(input) {
+    let val = input.value.replace(/\D/g,'').substring(0,4);
+    if (val.length >= 2) val = val.substring(0,2) + ' / ' + val.substring(2);
+    input.value = val;
+  }
+
+  async function processPayment() {
+    const btn = document.getElementById('payBtn');
+    btn.innerHTML = '<div class="spinner"></div>';
+    btn.disabled = true;
+
+    const sub = orderData ? orderData.total : 0;
+    const tip = sub * tipRate;
+    const grand = sub + tip;
+
+    const paymentData = {
+      orderId: orderData ? orderData.orderId : 'SPR-' + Date.now(),
+      orderApiId: orderData ? orderData.apiId : null,
+      restaurant: 'SPUR OR Tambo Airport',
+      category: 'Burgers',
+      items: orderData ? orderData.items : [],
+      subtotal: parseFloat(sub.toFixed(2)),
+      promoCode: enteredPromo || null,
+      promoDiscount: enteredPromo ? parseFloat((sub * 0.05).toFixed(2)) : 0,
+      tip: parseFloat(tip.toFixed(2)),
+      total: parseFloat(grand.toFixed(2)),
+      paymentMethod: selectedPayMethod,
+      status: 'PAID',
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      await fetch(PAYMENT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData)
+      });
+    } catch(e) {}
+
+    // ACSA interaction log — no customer or banking details
+    try {
+      const now = new Date();
+      const acsaLog = {
+        vendor: 'SPUR Steak Ranches',
+        location: 'OR Tambo International Airport',
+        date: now.toLocaleDateString('en-ZA'),
+        time: now.toLocaleTimeString('en-ZA'),
+        timestamp: now.toISOString(),
+        interactionType: 'Food Order & Payment'
+      };
+      await fetch(ACSA_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(acsaLog)
+      });
+    } catch(e) {}
+
+    // Update progress
+    document.getElementById('step3').className = 'step done';
+    document.getElementById('step3').querySelector('.step-num').textContent = '✓';
+    document.getElementById('step4').className = 'step active';
+
+    // Show success
+    document.getElementById('paySuccessRef').textContent = 'Order ' + paymentData.orderId;
+    document.getElementById('paySuccessOverlay').classList.add('show');
+
+    // Auto close after 4 seconds
+    setTimeout(function() {
+      window.close();
+    }, 4000);
+  }
+</script>
+</body>
+</html>
